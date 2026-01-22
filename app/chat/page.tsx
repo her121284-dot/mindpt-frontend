@@ -4,8 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { api, Session, Message } from '@/lib/api';
 import { auth } from '@/lib/auth';
-import Sidebar from '@/components/Sidebar';
 import ChatWindow from '@/components/ChatWindow';
+import SessionDrawer from '@/components/SessionDrawer';
 
 export default function ChatPage() {
   const router = useRouter();
@@ -14,6 +14,7 @@ export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
   // Check authentication on mount
   useEffect(() => {
@@ -59,10 +60,11 @@ export default function ChatPage() {
   const handleNewChat = async () => {
     try {
       setLoading(true);
-      const newSession = await api.createSession('New Conversation');
+      const newSession = await api.createSession('새 대화');
       setSessions([newSession, ...sessions]);
       setCurrentSessionId(newSession.id);
       setMessages([]);
+      setDrawerOpen(false);
     } catch (err: any) {
       console.error('Failed to create session:', err);
       setError(err.message);
@@ -75,6 +77,7 @@ export default function ChatPage() {
   const handleSelectSession = (sessionId: number) => {
     setCurrentSessionId(sessionId);
     loadMessages(sessionId);
+    setDrawerOpen(false);
   };
 
   // Send message
@@ -83,7 +86,7 @@ export default function ChatPage() {
       // Create a new session if none exists
       if (!currentSessionId) {
         setLoading(true);
-        const newSession = await api.createSession('New Conversation');
+        const newSession = await api.createSession('새 대화');
         setSessions([newSession, ...sessions]);
         setCurrentSessionId(newSession.id);
         setLoading(false);
@@ -108,14 +111,14 @@ export default function ChatPage() {
 
       // Optimistic UI update - add user message immediately
       const optimisticUserMessage: Message = {
-        id: Date.now(), // temporary ID
-        user_id: 0, // will be set by server
+        id: Date.now(),
+        user_id: 0,
         session_id: sessionId,
         role: 'user',
         content,
         created_at: new Date().toISOString(),
       };
-      setMessages([...messages, optimisticUserMessage]);
+      setMessages((prev) => [...prev, optimisticUserMessage]);
 
       // Send to API
       await api.sendMessage(sessionId, content);
@@ -143,30 +146,79 @@ export default function ChatPage() {
   // Show error notification
   useEffect(() => {
     if (error) {
-      const timer = setTimeout(() => setError(null), 30000); // 30초로 변경
+      const timer = setTimeout(() => setError(null), 30000);
       return () => clearTimeout(timer);
     }
   }, [error]);
 
   return (
-    <div className="flex h-screen">
-      <Sidebar
+    <div className="flex flex-col h-screen bg-white dark:bg-gray-950">
+      {/* 상단 헤더 */}
+      <header className="flex items-center justify-between px-4 py-3 border-b border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
+        <div className="flex items-center gap-3">
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white">
+            MINDPT
+          </h1>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {/* + 새로운 채팅 버튼 */}
+          <button
+            onClick={handleNewChat}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50 transition-colors text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            <span>새로운 채팅</span>
+          </button>
+
+          {/* 채팅 목록 버튼 */}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-200 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-gray-500 transition-colors text-sm font-medium"
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+            <span>채팅 목록</span>
+          </button>
+
+          {/* 로그아웃 버튼 */}
+          <button
+            onClick={handleLogout}
+            className="p-2 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors"
+            title="로그아웃"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+          </button>
+        </div>
+      </header>
+
+      {/* 채팅 영역 */}
+      <div className="flex-1 overflow-hidden">
+        <ChatWindow
+          messages={messages}
+          onSendMessage={handleSendMessage}
+          loading={loading}
+        />
+      </div>
+
+      {/* 오른쪽 드로어 */}
+      <SessionDrawer
+        open={drawerOpen}
+        onClose={() => setDrawerOpen(false)}
         sessions={sessions}
-        currentSessionId={currentSessionId}
-        onNewChat={handleNewChat}
+        activeSessionId={currentSessionId}
         onSelectSession={handleSelectSession}
-        onLogout={handleLogout}
-        loading={loading}
-      />
-      <ChatWindow
-        messages={messages}
-        onSendMessage={handleSendMessage}
-        loading={loading}
       />
 
       {/* Error Notification */}
       {error && (
-        <div className="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg">
+        <div className="fixed bottom-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
           <p className="text-sm">{error}</p>
         </div>
       )}
