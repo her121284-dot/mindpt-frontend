@@ -18,14 +18,14 @@ export default function LayoutWrapper({
   }
 
   return (
-    <div className="flex h-screen overflow-hidden">
+    <div className="flex h-screen w-full overflow-hidden">
       {/* Fixed Left Navigation */}
-      <aside className="flex-shrink-0">
+      <aside className="flex-shrink-0 w-64 min-w-0 max-w-64 overflow-hidden">
         <LeftNav />
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 overflow-hidden bg-white dark:bg-gray-950">
+      <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-gray-950">
         {children}
       </main>
     </div>

@@ -76,10 +76,13 @@ export interface User {
   created_at: string;
 }
 
+export type SessionType = 'counsel' | 'coach' | 'nag';
+
 export interface Session {
   id: number;
   user_id: number;
   title: string | null;
+  type: SessionType;
   created_at: string;
 }
 
@@ -149,20 +152,24 @@ export const api = {
   },
 
   /**
-   * Create a new session
+   * Create a new session with type
    */
-  async createSession(title?: string): Promise<Session> {
+  async createSession(options: { title?: string; type: SessionType }): Promise<Session> {
     return fetchAPI<Session>('/sessions', {
       method: 'POST',
-      body: JSON.stringify({ title: title || null }),
+      body: JSON.stringify({
+        title: options.title || null,
+        type: options.type
+      }),
     });
   },
 
   /**
-   * Get all sessions for current user
+   * Get all sessions for current user, optionally filtered by type
    */
-  async getSessions(): Promise<Session[]> {
-    return fetchAPI<Session[]>('/sessions');
+  async getSessions(type?: SessionType): Promise<Session[]> {
+    const endpoint = type ? `/sessions?type=${type}` : '/sessions';
+    return fetchAPI<Session[]>(endpoint);
   },
 
   /**

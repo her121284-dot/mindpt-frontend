@@ -60,7 +60,7 @@ export default function ChatPage() {
   const handleNewChat = async () => {
     try {
       setLoading(true);
-      const newSession = await api.createSession('새 대화');
+      const newSession = await api.createSession({ title: '새 대화', type: 'counsel' });
       setSessions([newSession, ...sessions]);
       setCurrentSessionId(newSession.id);
       setMessages([]);
@@ -86,7 +86,7 @@ export default function ChatPage() {
       // Create a new session if none exists
       if (!currentSessionId) {
         setLoading(true);
-        const newSession = await api.createSession('새 대화');
+        const newSession = await api.createSession({ title: '새 대화', type: 'counsel' });
         setSessions([newSession, ...sessions]);
         setCurrentSessionId(newSession.id);
         setLoading(false);

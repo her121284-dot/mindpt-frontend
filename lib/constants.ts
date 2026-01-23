@@ -4,7 +4,22 @@
 
 // External URLs
 export const EXTERNAL_URLS = {
-  NAVER_CAFE: 'https://cafe.naver.com', // TODO: Replace with actual MINDPT cafe URL
+  NAVER_CAFE: 'https://cafe.naver.com/mindpt', // MINDPT cafe URL
+} as const;
+
+// Homework template for clipboard copy
+export const HOMEWORK_TEMPLATE = `[오늘의 글쓰기 숙제]
+
+1) 오늘의 감정:
+2) 상황:
+3) 내가 한 해석:
+4) 내가 진짜 원한 것(욕구/가치):
+5) 다음 행동 선택(1개):
+`;
+
+// LocalStorage keys
+export const STORAGE_KEYS = {
+  HOMEWORK_DONE_PREFIX: 'mindpt_homework_done_',
 } as const;
 
 // Menu items configuration
