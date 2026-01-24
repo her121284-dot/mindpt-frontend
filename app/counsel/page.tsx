@@ -63,8 +63,21 @@ export default function CounselPage() {
     setInput('');
 
     if (isAuthenticated) {
-      // Use real API
-      await sendMessage(content);
+      // If no current session, create one and redirect to /chat/[id]
+      if (!currentSession) {
+        try {
+          const newSession = await createNewSession();
+          if (newSession) {
+            // Redirect to chat page with the first message
+            router.push(`/chat/${newSession.id}?start=${encodeURIComponent(content)}`);
+          }
+        } catch (error) {
+          console.error('Failed to create session:', error);
+        }
+      } else {
+        // Session exists, send message normally
+        await sendMessage(content);
+      }
     } else {
       // Demo mode with dummy responses
       const userMessage: LocalMessage = {

@@ -25,7 +25,7 @@ export default function LayoutWrapper({
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 min-w-0 overflow-hidden bg-white dark:bg-gray-950">
+      <main className="flex-1 min-w-0 overflow-y-auto bg-white dark:bg-gray-950">
         {children}
       </main>
     </div>

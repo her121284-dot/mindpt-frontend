@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import AdSlot from '@/components/AdSlot';
 import { settings, FontSize } from '@/lib/settings';
@@ -41,6 +41,7 @@ function CoachPageLoading() {
 
 function CoachPageContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const sessionId = searchParams.get('session');
 
   const [input, setInput] = useState('');
@@ -133,8 +134,21 @@ function CoachPageContent() {
     setShowWelcome(false); // Hide welcome after first message
 
     if (isAuthenticated) {
-      // Use real API
-      await sendMessage(content);
+      // If no current session, create one and redirect to /chat/[id]
+      if (!currentSession) {
+        try {
+          const newSession = await createNewSession();
+          if (newSession) {
+            // Redirect to chat page with the first message
+            router.push(`/chat/${newSession.id}?start=${encodeURIComponent(content)}`);
+          }
+        } catch (error) {
+          console.error('Failed to create session:', error);
+        }
+      } else {
+        // Session exists, send message normally
+        await sendMessage(content);
+      }
     } else {
       // Demo mode with dummy responses
       const userMessage: LocalMessage = {

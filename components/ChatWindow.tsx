@@ -16,16 +16,25 @@ export default function ChatWindow({
   loading,
 }: ChatWindowProps) {
   const [input, setInput] = useState('');
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    // 1) messagesEndRef로 스크롤 (가장 안정적)
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'end' });
+      return;
+    }
+
+    // 2) fallback: 컨테이너 scrollTop을 최대로
+    const el = scrollContainerRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages.length]);
 
   const handleSubmit = async () => {
     if (!input.trim() || loading) return;
@@ -39,6 +48,11 @@ export default function ChatWindow({
     }
 
     await onSendMessage(messageContent);
+
+    // 메시지 전송 직후 스크롤
+    setTimeout(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
+    }, 0);
   };
 
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -58,7 +72,7 @@ export default function ChatWindow({
   return (
     <div className="flex-1 flex flex-col h-full bg-white dark:bg-gray-950">
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 py-6">
         {messages.length === 0 ? (
           <div className="h-full flex items-center justify-center text-gray-500 dark:text-gray-400">
             <div className="text-center">

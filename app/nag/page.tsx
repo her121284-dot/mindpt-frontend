@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
 import AdSlot from '@/components/AdSlot';
 import { settings, FontSize } from '@/lib/settings';
@@ -22,6 +23,7 @@ interface LocalMessage {
 }
 
 export default function NagPage() {
+  const router = useRouter();
   const [input, setInput] = useState('');
   const [fontSize, setFontSize] = useState<FontSize>('default');
 
@@ -59,8 +61,21 @@ export default function NagPage() {
     setInput('');
 
     if (isAuthenticated) {
-      // Use real API
-      await sendMessage(content);
+      // If no current session, create one and redirect to /chat/[id]
+      if (!currentSession) {
+        try {
+          const newSession = await createNewSession();
+          if (newSession) {
+            // Redirect to chat page with the first message
+            router.push(`/chat/${newSession.id}?start=${encodeURIComponent(content)}`);
+          }
+        } catch (error) {
+          console.error('Failed to create session:', error);
+        }
+      } else {
+        // Session exists, send message normally
+        await sendMessage(content);
+      }
     } else {
       // Demo mode with dummy responses
       const userMessage: LocalMessage = {

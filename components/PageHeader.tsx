@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 
 interface PageHeaderProps {
   title: string;
+  subtitle?: string;
   showSettings?: boolean;
   settingsHref?: string;
   onBack?: () => void;
@@ -12,6 +13,7 @@ interface PageHeaderProps {
 
 export default function PageHeader({
   title,
+  subtitle,
   showSettings = false,
   settingsHref,
   onBack,
@@ -38,9 +40,16 @@ export default function PageHeader({
             </svg>
           </button>
         )}
-        <h1 className="text-lg font-semibold text-gray-900 dark:text-white" style={{ letterSpacing: '0.5px' }}>
-          {title}
-        </h1>
+        <div>
+          <h1 className="text-lg font-semibold text-gray-900 dark:text-white" style={{ letterSpacing: '0.5px' }}>
+            {title}
+          </h1>
+          {subtitle && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+              {subtitle}
+            </p>
+          )}
+        </div>
       </div>
 
       <div className="flex items-center gap-2">
