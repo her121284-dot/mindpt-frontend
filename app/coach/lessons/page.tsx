@@ -1,50 +1,153 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
-
-interface Lesson {
-  id: number;
-  title: string;
-  date: string;
-  status: 'completed' | 'in_progress' | 'not_started';
-  progress: number;
-}
-
-// 더미 데이터
-const initialLessons: Lesson[] = [
-  { id: 1, title: '목표 설정의 기초', date: '2024-01-20', status: 'completed', progress: 100 },
-  { id: 2, title: '시간 관리 마스터하기', date: '2024-01-19', status: 'completed', progress: 100 },
-  { id: 3, title: '습관 형성의 과학', date: '2024-01-18', status: 'in_progress', progress: 60 },
-  { id: 4, title: '동기부여 유지하기', date: '2024-01-17', status: 'not_started', progress: 0 },
-  { id: 5, title: '스트레스 관리', date: '2024-01-16', status: 'not_started', progress: 0 },
-];
+import {
+  getTutorSeries,
+  TutorSeries,
+  TutorLesson,
+  loadProgress,
+  updateCurrentPosition,
+  calculateLessonStatus,
+  LessonStatus,
+  SERIES_INFO,
+  SeriesId,
+} from '@/lib/tutorApi';
 
 export default function CoachLessonsPage() {
-  const [lessons] = useState<Lesson[]>(initialLessons);
+  return (
+    <Suspense fallback={<LessonsPageLoading />}>
+      <LessonsPageContent />
+    </Suspense>
+  );
+}
 
-  const getStatusBadge = (status: Lesson['status']) => {
+function LessonsPageLoading() {
+  return (
+    <div className="h-full flex items-center justify-center">
+      <div className="animate-spin w-8 h-8 border-4 border-green-600 border-t-transparent rounded-full"></div>
+    </div>
+  );
+}
+
+function LessonsPageContent() {
+  const router = useRouter();
+  const [series, setSeries] = useState<TutorSeries | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
+  const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
+
+  // Load progress and fetch series data
+  useEffect(() => {
+    const init = async () => {
+      try {
+        // Load progress from localStorage
+        const progress = loadProgress();
+        setCompletedLessonIds(progress.completedLessonIds);
+        setCurrentLessonId(progress.currentLessonId);
+
+        // Fetch OT series
+        const { series: fetchedSeries } = await getTutorSeries('OT');
+        setSeries(fetchedSeries);
+      } catch (e) {
+        console.error('[LessonsPage] Failed to load:', e);
+        setError('레슨 목록을 불러올 수 없습니다.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    init();
+  }, []);
+
+  const handleLessonClick = (lesson: TutorLesson, status: LessonStatus) => {
+    // Locked lessons cannot be clicked
+    if (status === 'locked') return;
+
+    // Update current position and navigate to tutor
+    updateCurrentPosition(lesson.lessonId, 0);
+    router.push('/coach/tutor');
+  };
+
+  const getStatusBadge = (status: LessonStatus) => {
     switch (status) {
       case 'completed':
         return (
-          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full">
+          <span className="px-2 py-1 text-xs font-medium bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 rounded-full flex items-center gap-1">
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
             완료
           </span>
         );
-      case 'in_progress':
+      case 'current':
         return (
-          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full">
+          <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 rounded-full flex items-center gap-1">
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM9.555 7.168A1 1 0 008 8v4a1 1 0 001.555.832l3-2a1 1 0 000-1.664l-3-2z" clipRule="evenodd" />
+            </svg>
             진행중
           </span>
         );
-      default:
+      case 'available':
         return (
-          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400 rounded-full">
-            시작 전
+          <span className="px-2 py-1 text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 rounded-full">
+            시작 가능
+          </span>
+        );
+      case 'locked':
+        return (
+          <span className="px-2 py-1 text-xs font-medium bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500 rounded-full flex items-center gap-1">
+            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            </svg>
+            잠김
           </span>
         );
     }
   };
+
+  // Calculate stats
+  const stats = series
+    ? {
+        completed: series.lessons.filter((_, i) =>
+          calculateLessonStatus(
+            series.lessons[i].lessonId,
+            i,
+            'OT' as SeriesId,
+            'OT' as SeriesId,
+            currentLessonId,
+            completedLessonIds
+          ) === 'completed'
+        ).length,
+        inProgress: series.lessons.filter((_, i) =>
+          calculateLessonStatus(
+            series.lessons[i].lessonId,
+            i,
+            'OT' as SeriesId,
+            'OT' as SeriesId,
+            currentLessonId,
+            completedLessonIds
+          ) === 'current'
+        ).length,
+        available: series.lessons.filter((_, i) =>
+          calculateLessonStatus(
+            series.lessons[i].lessonId,
+            i,
+            'OT' as SeriesId,
+            'OT' as SeriesId,
+            currentLessonId,
+            completedLessonIds
+          ) === 'available'
+        ).length,
+      }
+    : { completed: 0, inProgress: 0, available: 0 };
+
+  if (loading) {
+    return <LessonsPageLoading />;
+  }
 
   return (
     <div className="h-full flex flex-col">
@@ -52,73 +155,135 @@ export default function CoachLessonsPage() {
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-3xl mx-auto">
-          {/* 통계 */}
-          <div className="grid grid-cols-3 gap-4 mb-6">
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                {lessons.filter(l => l.status === 'completed').length}
-              </p>
-              <p className="text-sm text-green-700 dark:text-green-300">완료</p>
+          {/* Series Header */}
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-2">
+              <span className="px-3 py-1 text-sm font-semibold bg-green-600 text-white rounded-full">
+                OT
+              </span>
+              <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+                {SERIES_INFO.OT.title}
+              </h2>
             </div>
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                {lessons.filter(l => l.status === 'in_progress').length}
-              </p>
-              <p className="text-sm text-blue-700 dark:text-blue-300">진행중</p>
-            </div>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 text-center">
-              <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-                {lessons.filter(l => l.status === 'not_started').length}
-              </p>
-              <p className="text-sm text-gray-600 dark:text-gray-400">대기중</p>
-            </div>
-          </div>
-
-          {/* 레슨 목록 */}
-          <div className="space-y-3">
-            {lessons.map((lesson) => (
-              <div
-                key={lesson.id}
-                className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-md transition-shadow cursor-pointer"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <h3 className="font-semibold text-gray-900 dark:text-white">
-                      {lesson.title}
-                    </h3>
-                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      {lesson.date}
-                    </p>
-                  </div>
-                  {getStatusBadge(lesson.status)}
-                </div>
-
-                {/* 진행률 바 */}
-                <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-2">
-                  <div
-                    className={`h-2 rounded-full transition-all ${
-                      lesson.status === 'completed'
-                        ? 'bg-green-500'
-                        : lesson.status === 'in_progress'
-                        ? 'bg-blue-500'
-                        : 'bg-gray-300 dark:bg-gray-600'
-                    }`}
-                    style={{ width: `${lesson.progress}%` }}
-                  />
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right">
-                  {lesson.progress}% 완료
-                </p>
-              </div>
-            ))}
-          </div>
-
-          {/* 안내 문구 */}
-          <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              * 현재 UI 데모 버전입니다. 실제 레슨 기능은 추후 연동 예정입니다.
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {SERIES_INFO.OT.description}
             </p>
           </div>
+
+          {/* Error State */}
+          {error && (
+            <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4 mb-6">
+              <p className="text-red-600 dark:text-red-400 text-sm">{error}</p>
+              <button
+                onClick={() => window.location.reload()}
+                className="mt-2 text-sm text-red-700 dark:text-red-300 underline"
+              >
+                다시 시도
+              </button>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!error && series && series.lessons.length === 0 && (
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-8 text-center">
+              <div className="w-16 h-16 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-8 h-8 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                </svg>
+              </div>
+              <p className="text-gray-500 dark:text-gray-400">
+                아직 레슨이 없습니다
+              </p>
+            </div>
+          )}
+
+          {/* Stats */}
+          {series && series.lessons.length > 0 && (
+            <>
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
+                    {stats.completed}
+                  </p>
+                  <p className="text-sm text-green-700 dark:text-green-300">완료</p>
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                    {stats.inProgress}
+                  </p>
+                  <p className="text-sm text-blue-700 dark:text-blue-300">진행중</p>
+                </div>
+                <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 text-center">
+                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
+                    {stats.available}
+                  </p>
+                  <p className="text-sm text-emerald-700 dark:text-emerald-300">시작 가능</p>
+                </div>
+              </div>
+
+              {/* Lesson List */}
+              <div className="space-y-3">
+                {series.lessons.map((lesson, index) => {
+                  const status = calculateLessonStatus(
+                    lesson.lessonId,
+                    index,
+                    'OT' as SeriesId,
+                    'OT' as SeriesId,
+                    currentLessonId,
+                    completedLessonIds
+                  );
+
+                  const isClickable = status !== 'locked';
+
+                  return (
+                    <div
+                      key={lesson.lessonId}
+                      onClick={() => handleLessonClick(lesson, status)}
+                      className={`bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 transition-all ${
+                        isClickable
+                          ? 'hover:shadow-md hover:border-green-300 dark:hover:border-green-700 cursor-pointer'
+                          : 'opacity-60 cursor-not-allowed'
+                      }`}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="text-xs font-medium text-gray-400 dark:text-gray-500">
+                              {lesson.lessonId}
+                            </span>
+                          </div>
+                          <h3 className={`font-semibold ${
+                            isClickable
+                              ? 'text-gray-900 dark:text-white'
+                              : 'text-gray-500 dark:text-gray-500'
+                          }`}>
+                            {lesson.title}
+                          </h3>
+                          {lesson.description && (
+                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-1">
+                              {lesson.description}
+                            </p>
+                          )}
+                        </div>
+                        <div className="ml-4 flex-shrink-0">
+                          {getStatusBadge(status)}
+                        </div>
+                      </div>
+
+                      {/* Lesson content preview for available/current */}
+                      {(status === 'current' || status === 'available') && lesson.paragraphs.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                          <p className="text-sm text-gray-500 dark:text-gray-400 line-clamp-2">
+                            {lesson.paragraphs[0]}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>

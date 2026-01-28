@@ -6,7 +6,7 @@ import PageHeader from '@/components/PageHeader';
 import AdSlot from '@/components/AdSlot';
 import { settings, FontSize } from '@/lib/settings';
 import { useChat } from '@/hooks/useChat';
-import { EXTERNAL_URLS, HOMEWORK_TEMPLATE, STORAGE_KEYS } from '@/lib/constants';
+import { resetTutorProgressAndSession } from '@/lib/tutorApi';
 
 // Dummy responses for non-authenticated users
 const DUMMY_RESPONSES = [
@@ -47,8 +47,6 @@ function CoachPageContent() {
   const [input, setInput] = useState('');
   const [fontSize, setFontSize] = useState<FontSize>('default');
   const [showWelcome, setShowWelcome] = useState(false);
-  const [homeworkDone, setHomeworkDone] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   // For non-authenticated demo mode
   const [localMessages, setLocalMessages] = useState<LocalMessage[]>([]);
@@ -82,43 +80,6 @@ function CoachPageContent() {
       }
     }
   }, [sessionId, isAuthenticated, loadSession]);
-
-  // Load homework completion status from localStorage
-  useEffect(() => {
-    if (currentSession?.id) {
-      const key = `${STORAGE_KEYS.HOMEWORK_DONE_PREFIX}${currentSession.id}`;
-      const done = localStorage.getItem(key) === 'true';
-      setHomeworkDone(done);
-    }
-  }, [currentSession?.id]);
-
-  // Handle cafe link click (new tab)
-  const handleGoToCafe = () => {
-    window.open(EXTERNAL_URLS.NAVER_CAFE, '_blank', 'noopener,noreferrer');
-  };
-
-  // Handle template copy to clipboard
-  const handleCopyTemplate = async () => {
-    try {
-      await navigator.clipboard.writeText(HOMEWORK_TEMPLATE);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch (error) {
-      console.error('Failed to copy template:', error);
-    }
-  };
-
-  // Handle homework completion
-  const handleHomeworkDone = () => {
-    if (currentSession?.id) {
-      const key = `${STORAGE_KEYS.HOMEWORK_DONE_PREFIX}${currentSession.id}`;
-      localStorage.setItem(key, 'true');
-      setHomeworkDone(true);
-    } else {
-      // Demo mode - just toggle state
-      setHomeworkDone(true);
-    }
-  };
 
   const fontSizeClass = settings.getFontSizeClass(fontSize);
 
@@ -178,12 +139,11 @@ function CoachPageContent() {
     }
   };
 
-  const handleNewLesson = async () => {
-    setShowWelcome(false);
-    if (isAuthenticated) {
-      await createNewSession();
-    } else {
-      setLocalMessages([]);
+  const handleNewLesson = () => {
+    const confirmed = window.confirm('새 레슨을 시작할까요? 현재 튜터링 진도가 초기화됩니다.');
+    if (confirmed) {
+      resetTutorProgressAndSession();
+      router.push('/coach/tutor');
     }
   };
 
@@ -288,71 +248,6 @@ function CoachPageContent() {
 
       {/* Input Area */}
       <div className="border-t border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-950">
-        {/* Homework Card */}
-        {!homeworkDone && (
-          <div className="max-w-3xl mx-auto px-4 pt-4">
-            <div className="bg-gradient-to-r from-amber-50 to-orange-50 dark:from-amber-900/20 dark:to-orange-900/20 border border-amber-200 dark:border-amber-800 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex-shrink-0 w-10 h-10 bg-amber-100 dark:bg-amber-800 rounded-full flex items-center justify-center">
-                  <svg className="w-5 h-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-1">오늘의 숙제</h3>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 mb-3">
-                    듣기만 하면 변화가 없어요. 오늘은 글쓰기로 연습해볼까요?
-                  </p>
-                  <div className="flex flex-wrap gap-2">
-                    <button
-                      onClick={handleGoToCafe}
-                      className="px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      카페 글쓰기
-                    </button>
-                    <button
-                      onClick={handleCopyTemplate}
-                      className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
-                        copied
-                          ? 'bg-green-100 text-green-700 dark:bg-green-800 dark:text-green-300'
-                          : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-700 dark:text-gray-300'
-                      }`}
-                    >
-                      {copied ? (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                          </svg>
-                          복사됨!
-                        </>
-                      ) : (
-                        <>
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
-                          </svg>
-                          템플릿 복사
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={handleHomeworkDone}
-                      className="px-3 py-1.5 bg-amber-100 hover:bg-amber-200 dark:bg-amber-800 dark:hover:bg-amber-700 text-amber-700 dark:text-amber-300 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      완료했어요
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
         <div className="max-w-3xl mx-auto px-4 py-4">
           <div className="flex items-end gap-2">
             <textarea
