@@ -8,7 +8,9 @@ import {
   SERIES_INFO,
   calculateLessonStatus,
   LessonStatus,
+  TutorProgress,
 } from '@/lib/tutorApi';
+import { isSeriesReachable } from '@/lib/tutorSeriesPolicy';
 
 interface CurriculumPanelProps {
   isOpen: boolean;
@@ -80,6 +82,18 @@ export default function CurriculumPanel({
     (lessonId: string, status: LessonStatus) => {
       if (status === 'locked') return;
 
+      // Check if series is reachable
+      const progressForCheck: TutorProgress = {
+        currentSeriesId,
+        completedLessonIds,
+        currentLessonId,
+        currentParagraphIndex: 0,
+        lastUpdated: '',
+      };
+      if (!isSeriesReachable(selectedSeriesId, progressForCheck)) {
+        return;
+      }
+
       // Check if series is available
       if (!SERIES_INFO[selectedSeriesId].available && selectedSeriesId !== currentSeriesId) {
         return;
@@ -88,7 +102,7 @@ export default function CurriculumPanel({
       onSelectLesson(selectedSeriesId, lessonId);
       onClose();
     },
-    [selectedSeriesId, currentSeriesId, onSelectLesson, onClose]
+    [selectedSeriesId, currentSeriesId, currentLessonId, completedLessonIds, onSelectLesson, onClose]
   );
 
   // Get status badge styling
@@ -163,24 +177,34 @@ export default function CurriculumPanel({
           {SERIES_TABS.map((tabId) => {
             const info = SERIES_INFO[tabId];
             const isSelected = tabId === selectedSeriesId;
-            const isAvailable = info.available;
+            // Check if series is reachable based on progress
+            const progressForCheck: TutorProgress = {
+              currentSeriesId,
+              completedLessonIds,
+              currentLessonId,
+              currentParagraphIndex: 0,
+              lastUpdated: '',
+            };
+            const reachable = isSeriesReachable(tabId, progressForCheck);
+            const isAvailable = info.available && reachable;
 
             return (
               <button
                 key={tabId}
-                onClick={() => setSelectedSeriesId(tabId)}
+                onClick={() => reachable && setSelectedSeriesId(tabId)}
+                disabled={!reachable}
                 className={`flex-1 py-3 px-2 text-sm font-medium transition-colors relative ${
                   isSelected
                     ? 'text-green-600 dark:text-green-400'
                     : isAvailable
                     ? 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
-                    : 'text-gray-400 dark:text-gray-600'
+                    : 'text-gray-400 dark:text-gray-600 cursor-not-allowed'
                 }`}
               >
                 <span className="flex flex-col items-center gap-0.5">
                   <span>{tabId}</span>
-                  {!isAvailable && (
-                    <span className="text-[10px] text-gray-400 dark:text-gray-600">준비중</span>
+                  {!reachable && (
+                    <span className="text-[10px] text-gray-400 dark:text-gray-600">잠김</span>
                   )}
                 </span>
                 {isSelected && (

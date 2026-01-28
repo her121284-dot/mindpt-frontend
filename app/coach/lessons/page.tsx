@@ -7,13 +7,17 @@ import {
   getTutorSeries,
   TutorSeries,
   TutorLesson,
-  loadProgress,
   updateCurrentPosition,
   calculateLessonStatus,
   LessonStatus,
   SERIES_INFO,
   SeriesId,
+  TutorProgress,
 } from '@/lib/tutorApi';
+import {
+  loadSanitizedProgress,
+  isSeriesReachable,
+} from '@/lib/tutorSeriesPolicy';
 
 export default function CoachLessonsPage() {
   return (
@@ -43,8 +47,8 @@ function LessonsPageContent() {
   useEffect(() => {
     const init = async () => {
       try {
-        // Load progress from localStorage
-        const progress = loadProgress();
+        // Load sanitized progress from localStorage
+        const progress = loadSanitizedProgress();
         setCompletedLessonIds(progress.completedLessonIds);
         setCurrentLessonId(progress.currentLessonId);
 
@@ -65,6 +69,20 @@ function LessonsPageContent() {
   const handleLessonClick = (lesson: TutorLesson, status: LessonStatus) => {
     // Locked lessons cannot be clicked
     if (status === 'locked') return;
+
+    // Check if series is reachable
+    const seriesId = lesson.seriesId as SeriesId;
+    const progressForCheck: TutorProgress = {
+      currentSeriesId: seriesId,
+      completedLessonIds,
+      currentLessonId,
+      currentParagraphIndex: 0,
+      lastUpdated: '',
+    };
+    if (!isSeriesReachable(seriesId, progressForCheck)) {
+      console.warn('[LessonsPage] Series not reachable:', seriesId);
+      return;
+    }
 
     // Update current position and navigate to tutor
     updateCurrentPosition(lesson.lessonId, 0);

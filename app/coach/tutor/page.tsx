@@ -8,7 +8,6 @@ import {
   TutorSeries,
   TutorLesson,
   TutorApiError,
-  loadProgress,
   markLessonCompleted,
   updateCurrentPosition,
   isLessonCompleted,
@@ -20,6 +19,10 @@ import {
   getNextSeriesDisplayName,
   SERIES_INFO,
 } from '@/lib/tutorApi';
+import {
+  loadSanitizedProgress,
+  isSeriesReachable,
+} from '@/lib/tutorSeriesPolicy';
 import {
   generateExplanation,
   generateSummary,
@@ -114,7 +117,14 @@ function TutorPageContent() {
     async function loadContent() {
       try {
         // Load saved progress first to determine which series to load
-        const progress = loadProgress();
+        const progress = loadSanitizedProgress();
+
+        // Guard: Check if current series is reachable, redirect if not
+        if (!isSeriesReachable(progress.currentSeriesId, progress)) {
+          console.warn('[Tutor] Series not reachable, redirecting to lessons');
+          router.replace('/coach/lessons');
+          return;
+        }
         const seriesIdToLoad = progress.currentSeriesId || 'OT';
 
         const result = await getTutorSeries(seriesIdToLoad);
