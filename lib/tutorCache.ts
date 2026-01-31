@@ -72,6 +72,19 @@ export function makeUnderstandingQuestionCacheKey(
   return `uq:${seriesId}:${lessonId}`;
 }
 
+/**
+ * Create render_block cache key
+ * Used for caching AI-generated readable blocks for each paragraph
+ * @param blockIndex - 0-based index of the paragraph/block
+ */
+export function makeRenderBlockCacheKey(
+  seriesId: string,
+  lessonId: string,
+  blockIndex: number
+): string {
+  return `render_block:${seriesId}:${lessonId}:${blockIndex}`;
+}
+
 // ============================================================================
 // Internal Helpers
 // ============================================================================

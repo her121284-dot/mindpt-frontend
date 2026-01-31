@@ -33,6 +33,57 @@ body {
     sans-serif;
 }
 
+/* Lesson markdown styles */
+.lesson-markdown table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.9rem;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+.lesson-markdown th,
+.lesson-markdown td {
+  border: 1px solid #d1d5db;
+  padding: 0.5rem 0.75rem;
+  text-align: center;
+  vertical-align: middle;
+}
+.lesson-markdown th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+.lesson-markdown ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+.lesson-markdown ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin: 0.5rem 0;
+}
+.lesson-markdown hr {
+  border: none;
+  border-top: 1px solid #d1d5db;
+  margin: 1rem 0;
+}
+.lesson-markdown strong {
+  font-weight: 700;
+}
+@media (prefers-color-scheme: dark) {
+  .lesson-markdown th,
+  .lesson-markdown td {
+    border-color: #4b5563;
+  }
+  .lesson-markdown th {
+    background-color: #1f2937;
+  }
+  .lesson-markdown hr {
+    border-color: #4b5563;
+  }
+}
+
 @layer utilities {
   .text-balance {
     text-wrap: balance;

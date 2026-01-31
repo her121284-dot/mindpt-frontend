@@ -9,6 +9,17 @@ import { auth } from './auth';
 const API_BASE_URL = '/api/proxy';
 
 // ============================================================================
+// DEV FLAGS: Development mode settings
+// TODO: Set all to false before production deployment!
+// ============================================================================
+
+/** Bypass series/lesson locking restrictions */
+export const DEV_UNLOCK_ALL_LESSONS = true;
+
+/** Skip authentication for tutor AI generation (render_block, explain, etc.) */
+export const DEV_SKIP_TUTOR_AUTH = true;
+
+// ============================================================================
 // localStorage Progress Schema (MVP)
 // ============================================================================
 
@@ -151,13 +162,7 @@ export function resetTutorProgressAndSession(): void {
 
 // Fallback endpoints to try in order
 const OT_ENDPOINTS = [
-  '/contents/series/OT', // Pluralized `contents`
-  '/content/series/ot',  // Lowercase `ot`
-  '/series/OT',          // No `/content` prefix
-  '/content/OT',
-  '/content/ot',
-  '/content?series=OT',
-  '/content/series/OT',
+  '/content/series/OT',  // Primary endpoint (singular 'content')
 ];
 
 export interface TutorApiError {

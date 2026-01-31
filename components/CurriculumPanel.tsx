@@ -9,6 +9,7 @@ import {
   calculateLessonStatus,
   LessonStatus,
   TutorProgress,
+  DEV_UNLOCK_ALL_LESSONS,
 } from '@/lib/tutorApi';
 import { isSeriesReachable } from '@/lib/tutorSeriesPolicy';
 
@@ -80,18 +81,21 @@ export default function CurriculumPanel({
   // Handle lesson click
   const handleLessonClick = useCallback(
     (lessonId: string, status: LessonStatus) => {
-      if (status === 'locked') return;
+      // DEV_UNLOCK_ALL_LESSONS bypasses lock check
+      if (!DEV_UNLOCK_ALL_LESSONS && status === 'locked') return;
 
-      // Check if series is reachable
-      const progressForCheck: TutorProgress = {
-        currentSeriesId,
-        completedLessonIds,
-        currentLessonId,
-        currentParagraphIndex: 0,
-        lastUpdated: '',
-      };
-      if (!isSeriesReachable(selectedSeriesId, progressForCheck)) {
-        return;
+      // Check if series is reachable (bypassed by DEV flag)
+      if (!DEV_UNLOCK_ALL_LESSONS) {
+        const progressForCheck: TutorProgress = {
+          currentSeriesId,
+          completedLessonIds,
+          currentLessonId,
+          currentParagraphIndex: 0,
+          lastUpdated: '',
+        };
+        if (!isSeriesReachable(selectedSeriesId, progressForCheck)) {
+          return;
+        }
       }
 
       // Check if series is available
@@ -185,7 +189,8 @@ export default function CurriculumPanel({
               currentParagraphIndex: 0,
               lastUpdated: '',
             };
-            const reachable = isSeriesReachable(tabId, progressForCheck);
+            // DEV_UNLOCK_ALL_LESSONS bypasses series lock
+            const reachable = DEV_UNLOCK_ALL_LESSONS || isSeriesReachable(tabId, progressForCheck);
             const isAvailable = info.available && reachable;
 
             return (
@@ -264,7 +269,7 @@ export default function CurriculumPanel({
               {SERIES_INFO[selectedSeriesId].available && seriesData.lessons.length > 0 && (
                 <ul className="divide-y divide-gray-100 dark:divide-gray-800">
                   {seriesData.lessons.map((lesson, index) => {
-                    const status = calculateLessonStatus(
+                    let status = calculateLessonStatus(
                       lesson.lessonId,
                       index,
                       selectedSeriesId,
@@ -272,6 +277,10 @@ export default function CurriculumPanel({
                       currentLessonId,
                       completedLessonIds
                     );
+                    // DEV_UNLOCK_ALL_LESSONS: convert locked to available
+                    if (DEV_UNLOCK_ALL_LESSONS && status === 'locked') {
+                      status = 'available';
+                    }
                     const isClickable = status !== 'locked';
 
                     return (

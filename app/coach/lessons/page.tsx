@@ -13,6 +13,7 @@ import {
   SERIES_INFO,
   SeriesId,
   TutorProgress,
+  DEV_UNLOCK_ALL_LESSONS,
 } from '@/lib/tutorApi';
 import {
   loadSanitizedProgress,
@@ -67,21 +68,23 @@ function LessonsPageContent() {
   }, []);
 
   const handleLessonClick = (lesson: TutorLesson, status: LessonStatus) => {
-    // Locked lessons cannot be clicked
-    if (status === 'locked') return;
+    // DEV_UNLOCK_ALL_LESSONS bypasses lock check
+    if (!DEV_UNLOCK_ALL_LESSONS && status === 'locked') return;
 
-    // Check if series is reachable
-    const seriesId = lesson.seriesId as SeriesId;
-    const progressForCheck: TutorProgress = {
-      currentSeriesId: seriesId,
-      completedLessonIds,
-      currentLessonId,
-      currentParagraphIndex: 0,
-      lastUpdated: '',
-    };
-    if (!isSeriesReachable(seriesId, progressForCheck)) {
-      console.warn('[LessonsPage] Series not reachable:', seriesId);
-      return;
+    // Check if series is reachable (bypassed by DEV flag)
+    if (!DEV_UNLOCK_ALL_LESSONS) {
+      const seriesId = lesson.seriesId as SeriesId;
+      const progressForCheck: TutorProgress = {
+        currentSeriesId: seriesId,
+        completedLessonIds,
+        currentLessonId,
+        currentParagraphIndex: 0,
+        lastUpdated: '',
+      };
+      if (!isSeriesReachable(seriesId, progressForCheck)) {
+        console.warn('[LessonsPage] Series not reachable:', seriesId);
+        return;
+      }
     }
 
     // Update current position and navigate to tutor
@@ -242,7 +245,7 @@ function LessonsPageContent() {
               {/* Lesson List */}
               <div className="space-y-3">
                 {series.lessons.map((lesson, index) => {
-                  const status = calculateLessonStatus(
+                  let status = calculateLessonStatus(
                     lesson.lessonId,
                     index,
                     'OT' as SeriesId,
@@ -250,6 +253,10 @@ function LessonsPageContent() {
                     currentLessonId,
                     completedLessonIds
                   );
+                  // DEV_UNLOCK_ALL_LESSONS: convert locked to available
+                  if (DEV_UNLOCK_ALL_LESSONS && status === 'locked') {
+                    status = 'available';
+                  }
 
                   const isClickable = status !== 'locked';
 
