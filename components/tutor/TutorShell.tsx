@@ -1098,17 +1098,6 @@ export default function TutorShell({ embedded = false }: TutorShellProps) {
             </>
           )}
 
-          {/* Back to Coach Chat Button - only in standalone mode */}
-          {!embedded && (
-            <div className="mt-8 text-center">
-              <button
-                onClick={() => router.push('/coach')}
-                className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
-              >
-                코칭챗으로 돌아가기
-              </button>
-            </div>
-          )}
         </div>
       </div>
     </div>

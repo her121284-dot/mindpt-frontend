@@ -149,12 +149,20 @@ export default function CounselPage() {
         showSettings
         settingsHref="/counsel/settings"
         actions={
-          <button
-            onClick={handleNewChat}
-            className="text-sm px-3 py-1 rounded-lg bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors"
-          >
-            + 새 상담
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleNewChat}
+              className="text-sm px-3 py-1 rounded-lg bg-indigo-100 dark:bg-indigo-900 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-200 dark:hover:bg-indigo-800 transition-colors"
+            >
+              + 새 상담
+            </button>
+            <button
+              onClick={() => router.push('/conversations')}
+              className="text-sm px-3 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+            >
+              채팅목록
+            </button>
+          </div>
         }
       />
 

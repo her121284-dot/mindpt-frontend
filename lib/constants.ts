@@ -4,7 +4,7 @@
 
 // External URLs
 export const EXTERNAL_URLS = {
-  NAVER_CAFE: 'https://cafe.naver.com/mindpt', // MINDPT cafe URL
+  NAVER_CAFE: 'https://cafe.naver.com/blackfeeqo', // MINDPT cafe URL
 } as const;
 
 // Homework template for clipboard copy

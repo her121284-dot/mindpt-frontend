@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter } from 'next/navigation';
 import PageHeader from '@/components/PageHeader';
+import CurriculumPanel from '@/components/CurriculumPanel';
 import {
   getTutorSeries,
   TutorSeries,
@@ -19,6 +20,8 @@ import {
   loadSanitizedProgress,
   isSeriesReachable,
 } from '@/lib/tutorSeriesPolicy';
+
+type StatusFilter = 'all' | 'completed' | 'current' | 'available';
 
 export default function CoachLessonsPage() {
   return (
@@ -43,6 +46,8 @@ function LessonsPageContent() {
   const [error, setError] = useState<string | null>(null);
   const [completedLessonIds, setCompletedLessonIds] = useState<string[]>([]);
   const [currentLessonId, setCurrentLessonId] = useState<string | null>(null);
+  const [filter, setFilter] = useState<StatusFilter>('all');
+  const [showCurriculum, setShowCurriculum] = useState(false);
 
   // Load progress and fetch series data
   useEffect(() => {
@@ -166,27 +171,103 @@ function LessonsPageContent() {
       }
     : { completed: 0, inProgress: 0, available: 0 };
 
+  const handleFilterClick = (f: StatusFilter) => {
+    setFilter(prev => prev === f ? 'all' : f);
+  };
+
+  const handleCurriculumSelect = (seriesId: SeriesId, lessonId: string) => {
+    updateCurrentPosition(lessonId, 0);
+    setShowCurriculum(false);
+    router.push('/coach/tutor');
+  };
+
   if (loading) {
     return <LessonsPageLoading />;
   }
 
+  // Build lesson statuses for filtering
+  const lessonsWithStatus = series
+    ? series.lessons.map((lesson, index) => {
+        let status = calculateLessonStatus(
+          lesson.lessonId,
+          index,
+          'OT' as SeriesId,
+          'OT' as SeriesId,
+          currentLessonId,
+          completedLessonIds
+        );
+        if (DEV_UNLOCK_ALL_LESSONS && status === 'locked') {
+          status = 'available';
+        }
+        return { lesson, index, status };
+      })
+    : [];
+
+  const visibleLessons = filter === 'all'
+    ? lessonsWithStatus
+    : lessonsWithStatus.filter(l => l.status === filter);
+
   return (
     <div className="h-full flex flex-col">
-      <PageHeader title="레슨 목록" />
+      <PageHeader
+        title="레슨 목록"
+        actions={
+          <button
+            onClick={() => setShowCurriculum(true)}
+            className="text-sm px-3 py-1 rounded-lg bg-green-100 dark:bg-green-900 text-green-600 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-800 transition-colors font-medium"
+          >
+            커리큘럼
+          </button>
+        }
+      />
 
       <div className="flex-1 overflow-y-auto p-4">
         <div className="max-w-3xl mx-auto">
-          {/* Series Header */}
+          {/* Series Header + Filter Chips */}
           <div className="mb-6">
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 flex-wrap">
               <span className="px-3 py-1 text-sm font-semibold bg-green-600 text-white rounded-full">
                 OT
               </span>
               <h2 className="text-lg font-bold text-gray-900 dark:text-white">
                 {SERIES_INFO.OT.title}
               </h2>
+              {series && series.lessons.length > 0 && (
+                <div className="flex items-center gap-1.5 md:ml-auto flex-wrap">
+                  <button
+                    onClick={() => handleFilterClick('completed')}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-full transition-all ${
+                      filter === 'completed'
+                        ? 'bg-green-600 text-white shadow-sm'
+                        : 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 hover:bg-green-200 dark:hover:bg-green-900/50'
+                    }`}
+                  >
+                    완료 {stats.completed}
+                  </button>
+                  <button
+                    onClick={() => handleFilterClick('current')}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-full transition-all ${
+                      filter === 'current'
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/50'
+                    }`}
+                  >
+                    진행중 {stats.inProgress}
+                  </button>
+                  <button
+                    onClick={() => handleFilterClick('available')}
+                    className={`px-2.5 py-1 text-xs font-medium rounded-full transition-all ${
+                      filter === 'available'
+                        ? 'bg-emerald-600 text-white shadow-sm'
+                        : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 hover:bg-emerald-200 dark:hover:bg-emerald-900/50'
+                    }`}
+                  >
+                    시작가능 {stats.available}
+                  </button>
+                </div>
+              )}
             </div>
-            <p className="text-sm text-gray-500 dark:text-gray-400">
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {SERIES_INFO.OT.description}
             </p>
           </div>
@@ -218,46 +299,24 @@ function LessonsPageContent() {
             </div>
           )}
 
-          {/* Stats */}
+          {/* Lesson List */}
           {series && series.lessons.length > 0 && (
             <>
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div className="bg-green-50 dark:bg-green-900/20 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    {stats.completed}
-                  </p>
-                  <p className="text-sm text-green-700 dark:text-green-300">완료</p>
+              {/* Filter active notice */}
+              {filter !== 'all' && (
+                <div className="mb-3 flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
+                  <span>필터 적용됨: {visibleLessons.length}개</span>
+                  <button
+                    onClick={() => setFilter('all')}
+                    className="text-indigo-500 hover:text-indigo-600 underline"
+                  >
+                    전체 보기
+                  </button>
                 </div>
-                <div className="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-blue-600 dark:text-blue-400">
-                    {stats.inProgress}
-                  </p>
-                  <p className="text-sm text-blue-700 dark:text-blue-300">진행중</p>
-                </div>
-                <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 text-center">
-                  <p className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
-                    {stats.available}
-                  </p>
-                  <p className="text-sm text-emerald-700 dark:text-emerald-300">시작 가능</p>
-                </div>
-              </div>
+              )}
 
-              {/* Lesson List */}
               <div className="space-y-3">
-                {series.lessons.map((lesson, index) => {
-                  let status = calculateLessonStatus(
-                    lesson.lessonId,
-                    index,
-                    'OT' as SeriesId,
-                    'OT' as SeriesId,
-                    currentLessonId,
-                    completedLessonIds
-                  );
-                  // DEV_UNLOCK_ALL_LESSONS: convert locked to available
-                  if (DEV_UNLOCK_ALL_LESSONS && status === 'locked') {
-                    status = 'available';
-                  }
-
+                {visibleLessons.map(({ lesson, index, status }) => {
                   const isClickable = status !== 'locked';
 
                   return (
@@ -311,6 +370,16 @@ function LessonsPageContent() {
           )}
         </div>
       </div>
+
+      {/* Curriculum Panel */}
+      <CurriculumPanel
+        isOpen={showCurriculum}
+        onClose={() => setShowCurriculum(false)}
+        currentSeriesId={'OT' as SeriesId}
+        currentLessonId={currentLessonId}
+        completedLessonIds={completedLessonIds}
+        onSelectLesson={handleCurriculumSelect}
+      />
     </div>
   );
 }
