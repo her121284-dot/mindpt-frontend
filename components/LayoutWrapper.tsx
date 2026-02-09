@@ -6,13 +6,17 @@ import LeftNav from './LeftNav';
 
 const NO_NAV_ROUTES = ['/login', '/register'];
 
+function isMarketingRoute(path: string) {
+  return path === '/' || path.startsWith('/demo');
+}
+
 export default function LayoutWrapper({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const showNav = !NO_NAV_ROUTES.includes(pathname);
+  const showNav = !NO_NAV_ROUTES.includes(pathname) && !isMarketingRoute(pathname);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const drawerRef = useRef<HTMLDivElement>(null);
 
