@@ -364,47 +364,7 @@ export default function MandalartEditor({ draft, onUpdate }: MandalartEditorProp
     if (isCenter) {
       return (
         <div key={`block-${blockR}-${blockC}`} className="relative border-2 border-violet-300 dark:border-violet-600 rounded-lg overflow-hidden">
-          {/* Ribbon Arrow Overlay - inside center 3x3 block only */}
-          <svg
-            className="pointer-events-none absolute inset-0 z-0"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="none"
-            aria-hidden="true"
-          >
-            <defs>
-              <marker
-                id="arrowHeadCenter3x3"
-                viewBox="0 0 10 10"
-                refX="9"
-                refY="5"
-                markerWidth="7"
-                markerHeight="7"
-                orient="auto"
-                markerUnits="strokeWidth"
-              >
-                <path d="M 0 0 L 10 5 L 0 10 z" fill="rgba(139, 92, 246, 0.3)" />
-              </marker>
-            </defs>
 
-            {/* Ribbon-style: thick semi-transparent curves */}
-            <g
-              fill="none"
-              stroke="rgba(139, 92, 246, 0.3)"
-              strokeWidth="3.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              markerEnd="url(#arrowHeadCenter3x3)"
-            >
-              <path d="M 50 50 Q 40 40 18 18" />
-              <path d="M 50 50 Q 50 35 50 18" />
-              <path d="M 50 50 Q 60 40 82 18" />
-              <path d="M 50 50 Q 35 50 18 50" />
-              <path d="M 50 50 Q 65 50 82 50" />
-              <path d="M 50 50 Q 40 60 18 82" />
-              <path d="M 50 50 Q 50 65 50 82" />
-              <path d="M 50 50 Q 60 60 82 82" />
-            </g>
-          </svg>
           <div className="grid grid-cols-3 gap-0.5 p-0.5 relative z-10">
             {cells}
           </div>
