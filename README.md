@@ -153,6 +153,14 @@ npm run build
 npm run start
 ```
 
+## Deployment (AWS Amplify)
+
+- AWS Amplify Hosting에 GitHub 연결 후 `main` 브랜치 자동 배포
+- Amplify 콘솔 환경변수에 `NEXT_PUBLIC_API_BASE_URL`을 프로덕션 API URL로 설정
+- `localhost:8000`은 개발용이며, 프로덕션에서는 배포된 백엔드 URL을 사용
+- 빌드 설정은 `amplify.yml` 참고
+- 환경변수 템플릿은 `.env.example` 참고
+
 ## Technologies
 
 - **Framework**: Next.js 15.1 (App Router)
